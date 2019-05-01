@@ -152,7 +152,8 @@ ServerLobby::ServerLobby() : LobbyProtocol(NULL)
 ServerLobby::~ServerLobby()
 {
     if (NetworkConfig::get()->isNetworking() &&
-        NetworkConfig::get()->isWAN())
+        NetworkConfig::get()->isWAN() &&
+        !ServerConfig::m_validating_player)
     {
         unregisterServer(true/*now*/);
     }
@@ -461,7 +462,8 @@ void ServerLobby::asynchronousUpdate()
 
     if (NetworkConfig::get()->isWAN() &&
         allowJoinedPlayersWaiting() && m_server_recovering.expired() &&
-        StkTime::getRealTimeMs() > m_last_success_poll_time.load() + 30000)
+        StkTime::getRealTimeMs() > m_last_success_poll_time.load() + 30000 &&
+        ServerConfig::m_validating_player)
     {
         Log::warn("ServerLobby", "Trying auto server recovery.");
         registerServer(false/*now*/);
@@ -495,7 +497,8 @@ void ServerLobby::asynchronousUpdate()
     }
     case REGISTER_SELF_ADDRESS:
     {
-        if (m_game_setup->isGrandPrixStarted() || m_registered_for_once_only)
+        if (m_game_setup->isGrandPrixStarted() || m_registered_for_once_only ||
+            !ServerConfig::m_validating_player)
         {
             m_state = WAITING_FOR_START_GAME;
             break;

@@ -145,6 +145,7 @@ public:
 
     virtual void  update(int ticks) OVERRIDE;
     virtual void  updateGraphics(float dt) OVERRIDE;
+    virtual float getDistanceFromLeadKart(const int kard_id) OVERRIDE;
     float         getDistanceDownTrackForKart(const int kart_id,
                                             bool account_for_checklines) const;
     void          updateTrackSectors();

@@ -496,12 +496,6 @@ void Powerup::use()
  */
 void Powerup::hitBonusBox(const ItemState &item_state)
 {
-    // Position can be -1 in case of a battle mode (which doesn't have
-    // positions), but this case is properly handled in getRandomPowerup.
-    int position = m_kart->getPosition();
-
-    unsigned int n=1;
-    PowerupManager::PowerupType new_powerup;
     World *world = World::getWorld();
 
     // Determine a 'random' number based on time, index of the item,
@@ -542,6 +536,7 @@ void Powerup::hitBonusBox(const ItemState &item_state)
     // item. We multiply the item with a 'large' (more or less random)
     // number to spread the random values across the (typically 200)
     // weights used in the PowerupManager - same for the position.
+    int position = m_kart->getPosition();
     uint64_t random_number = item_state.getItemId() * 31 +
         world->getTicksSinceStart() / 10 + position * 23 +
         powerup_manager->getRandomSeed();
@@ -559,24 +554,27 @@ void Powerup::hitBonusBox(const ItemState &item_state)
     random_number ^= (random_number >> 16);
     random_number ^= (random_number >> 8);
 
-    new_powerup = powerup_manager->getRandomPowerup(position, &n, 
-                                                    random_number);
+    float distance = world->getDistanceFromLeadKart(m_kart->getWorldKartId());
+    const PowerupManager::WeightedPowerup &powerup =
+        powerup_manager->getRandomPowerup(distance, random_number);
+
+    Log::info("distance", "Reported as '%.6f'.", distance);
 
     // Always add a new powerup in ITEM_MODE_NEW (or if the kart
     // doesn't have a powerup atm).
     if(m_type == PowerupManager::POWERUP_NOTHING ||
        stk_config->m_same_powerup_mode == STKConfig::POWERUP_MODE_NEW )
     {
-        set( new_powerup, n );
+        set( powerup.getType(), powerup.getQuantity() );
     }
     else
     {
         // If powerup mode is 'SAME', or it's ONLY_IF_SAME and it is the
         // same powerup, increase the number of items.
         if(stk_config->m_same_powerup_mode == STKConfig::POWERUP_MODE_SAME ||
-            new_powerup==m_type)
+           powerup.getType() == m_type)
         {
-            m_number+=n;
+            m_number += powerup.getQuantity();
             if(m_number > MAX_POWERUPS)
                 m_number = MAX_POWERUPS;
         }

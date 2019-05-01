@@ -1303,6 +1303,11 @@ int handleCmdLine(bool has_server_config, bool has_parent_process)
     if ((NetworkConfig::get()->isServer() && ServerConfig::m_wan_server) ||
         CommandLine::has("--server-id", &server_id))
     {
+        // If we're not validating players, enable wan without STK online
+        // services.
+        if (!can_wan && !ServerConfig::m_validating_player)
+            can_wan = true;
+
         PlayerProfile* player = PlayerManager::getCurrentPlayer();
         // Try to use saved user token if exists
         if (!can_wan && player && player->wasOnlineLastTime() &&

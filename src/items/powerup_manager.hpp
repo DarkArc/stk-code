@@ -79,68 +79,93 @@ class PowerupManager : public NoCopy
 {
 public:
     LEAK_CHECK();
-private:
+
+    // The anvil and parachute must be at the end of the enum, and the
+    // zipper just before them (see Powerup::hitBonusBox).
+    enum PowerupType : unsigned {
+        POWERUP_NOTHING,
+        POWERUP_FIRST,
+        POWERUP_BUBBLEGUM = POWERUP_FIRST,
+        POWERUP_CAKE, POWERUP_BOWLING, POWERUP_ZIPPER, POWERUP_PLUNGER,
+        POWERUP_SWITCH, POWERUP_SWATTER, POWERUP_RUBBERBALL,
+        POWERUP_PARACHUTE,
+        POWERUP_ANVIL,      //powerup.cpp assumes these two come last
+        POWERUP_LAST=POWERUP_ANVIL,
+        POWERUP_MAX
+    };
+
+    // ------------------------------------------------------------------------
+    /** This object stores the mapping between a weight and a powerup type.
+     */
+    class WeightedPowerup
+    {
+      uint64_t m_weight;
+      int m_quantity;
+      PowerupType m_type;
+
+    public:
+      WeightedPowerup(const int& weight, const int& quantity,
+                      const PowerupType& type)
+          : m_weight(weight), m_quantity(quantity), m_type(type)
+      { }
+
+      WeightedPowerup merge(const WeightedPowerup &powerup) const
+      {
+          uint64_t new_weight = powerup.getWeight() + m_weight;
+          return WeightedPowerup(new_weight, m_quantity, m_type);
+      }
+
+      uint64_t getWeight() const { return m_weight; }
+
+      int getQuantity() const { return m_quantity; }
+
+      PowerupType getType() const { return m_type; }
+
+      bool operator < (const WeightedPowerup &other) const
+      {
+          return this->getWeight() < other.getWeight();
+      }
+    };  // class WeightedPowerup
+
     // ------------------------------------------------------------------------
     /** This object stores all the weights for one particular number of
      *  karts. I.e. it has a list of all the weights within the number of karts.
      */
     class WeightsData
     {
-    private:
-        /** The number of karts for which this entry is to be used. */
-        unsigned int m_num_karts;
+        /** The distance for which this entry is to be used. */
+        float m_distance;
 
-        /** Stores for each of the sections the weights from the XML file. */
-        std::vector < std::vector<int> > m_weights_for_section;
+        uint64_t m_cfd;
 
-        /** This field is only populated for the WeightData class that
-         *  is used during a race. It contains for each rank the summed
-         *  weights for easy lookup during a race. */
-        std::vector < std::vector<unsigned> > m_summed_weights_for_rank;
+        /** Stores the weights for this section mutliples can be found on
+            the second row (num powerups + n) where n is the
+            index of the powerup.
+
+            For race mode this includes the summation of all preceding weights
+          */
+        std::vector<WeightedPowerup> m_weights;
 
     public:
-        // The friend declaration gives the PowerupManager access to the
-        // internals, which is ONLY used for testing!!
-        friend PowerupManager;
-        WeightsData() { m_num_karts = 0; }
-        void reset();
-        void readData(int num_karts, const XMLNode *node);
-        void interpolate(WeightsData *prev, WeightsData *next, int num_karts);
-        void convertRankToSection(int rank, int *prev, int *next,
-                                 float *weight);
-        void precomputeWeights();
-        int getRandomItem(int rank, uint64_t random_number);
-        // --------------------------------------------------------------------
-        /** Sets the number of karts. */
-        void setNumKarts(int num_karts) { m_num_karts = num_karts; }
-        // --------------------------------------------------------------------
-        /** Returns for how many karts this entry is meant for. */
-        int getNumKarts() const { return m_num_karts; }
+        WeightsData(float distance, std::vector<WeightedPowerup> &&weights);
+
+        float getDistance() const { return m_distance; }
+
+        uint64_t getCFD() const { return m_cfd; }
+
+        const std::vector<WeightedPowerup> &getPowerupWeights() const { return m_weights; }
+
+        const WeightedPowerup &getRandomItem(uint64_t random_number) const;
     };   // class WeightsData
+
+private:
     // ------------------------------------------------------------------------
 
     /** The first key is the race type: race, battle, soccer etc.
      *  The key then contains a mapping from the kart numbers to the
      *  WeightsData object that stores all data for the give kart number.
      */
-    std::map<std::string, std::vector<WeightsData*> > m_all_weights;
-
-public:
-    // The anvil and parachute must be at the end of the enum, and the
-    // zipper just before them (see Powerup::hitBonusBox).
-    enum PowerupType {POWERUP_NOTHING,
-                      POWERUP_FIRST,
-                      POWERUP_BUBBLEGUM = POWERUP_FIRST,
-                      POWERUP_CAKE,
-                      POWERUP_BOWLING, POWERUP_ZIPPER, POWERUP_PLUNGER,
-                      POWERUP_SWITCH, POWERUP_SWATTER, POWERUP_RUBBERBALL,
-                      POWERUP_PARACHUTE,
-                      POWERUP_ANVIL,      //powerup.cpp assumes these two come last
-                      POWERUP_LAST=POWERUP_ANVIL,
-                      POWERUP_MAX
-    };
-
-private:
+    std::map<std::string, std::vector<WeightsData> > m_all_weights;
 
     /** The icon for each powerup. */
     Material*     m_all_icons [POWERUP_MAX];
@@ -150,7 +175,7 @@ private:
     irr::scene::IMesh *m_all_meshes[POWERUP_MAX];
 
     /** The weight distribution to be used for the current race. */
-    WeightsData m_current_item_weights;
+    std::vector<WeightsData> m_current_item_weights;
 
     PowerupType   getPowerupType(const std::string &name) const;
 
@@ -166,11 +191,11 @@ public:
     void          loadPowerupsModels ();
     void          loadWeights(const XMLNode *node, const std::string &category);
     void          unloadPowerups  ();
-    void          computeWeightsForRace(int num_karts);
+    void          selectWeightsForCurMode();
     void          loadPowerup     (PowerupType type, const XMLNode &node);
-    PowerupManager::PowerupType
-        getRandomPowerup(unsigned int pos, unsigned int *n,
-                         uint64_t random_number);
+
+    const WeightedPowerup &getRandomPowerup(float distance, uint64_t random_number);
+
     // ------------------------------------------------------------------------
     /** Returns the icon(material) for a powerup. */
     Material* getIcon(int type) const {return m_all_icons [type];}

@@ -263,6 +263,8 @@ public:
     virtual void    unpause() OVERRIDE;
     virtual void    getDefaultCollectibles(int *collectible_type,
                                            int *amount );
+    virtual float   getDistanceFromLeadKart(const int kard_id);
+
     // ------------------------------------------------------------------------
     /** Receives notification if an item is collected. Used for easter eggs. */
     virtual void collectedItem(const AbstractKart *kart, 

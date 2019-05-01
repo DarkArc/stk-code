@@ -304,6 +304,24 @@ void LinearWorld::updateGraphics(float dt)
 
 }   // updateGraphics
 
+//-----------------------------------------------------------------------------
+/** Returns the distance from the lead kart.
+ *  \param kart_id Id of the kart.
+ */
+float LinearWorld::getDistanceFromLeadKart(const int kart_id)
+{
+    assert(kart_id < (int)m_kart_info.size());
+
+    auto first_place_kart_it = std::max_element(
+        m_kart_info.begin(), m_kart_info.end(),
+        [] (const KartInfo &a, const KartInfo &b) {
+            return a.m_overall_distance < b.m_overall_distance;
+        });
+
+    return first_place_kart_it->m_overall_distance
+         - m_kart_info[kart_id].m_overall_distance;
+}   // getDistanceFromLeadKart
+
 // ----------------------------------------------------------------------------
 /** This calculate the time difference between the second kart in the
  *  race and the first kart in the race (who must be a ghost)

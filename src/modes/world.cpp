@@ -245,7 +245,7 @@ void World::init()
     // Must be called after all karts are created
     m_race_gui->init();
 
-    powerup_manager->computeWeightsForRace(race_manager->getNumberOfKarts());
+    powerup_manager->selectWeightsForCurMode();
     main_loop->renderGUI(7200);
     if (UserConfigParams::m_particles_effects > 1)
     {
@@ -1349,6 +1349,17 @@ void World::getDefaultCollectibles(int *collectible_type, int *amount )
     *collectible_type = PowerupManager::POWERUP_NOTHING;
     *amount = 0;
 }   // getDefaultCollectibles
+
+//-----------------------------------------------------------------------------
+/** Returns the distance from the lead kart.
+ *  \param kart_id Id of the kart.
+ */
+float World::getDistanceFromLeadKart(const int kart_id)
+{
+  // A base world doesn't know how to implement this, but we should return
+  // 0 as a default value to handle the majority of cases.
+  return 0;
+}
 
 //-----------------------------------------------------------------------------
 /** Pauses the music (and then pauses WorldStatus).
